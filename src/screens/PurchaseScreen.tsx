@@ -14,7 +14,7 @@ import { TextInput, Button, Checkbox, Text, Card, Portal, Modal, ActivityIndicat
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from '../components/DateTimePicker';
 import { supabase } from '../config/supabase';
 import { Material } from '../types';
 

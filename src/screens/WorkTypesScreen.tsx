@@ -66,6 +66,36 @@ const WorkTypesScreen = ({ navigation }: any) => {
     }
   };
 
+  const handleDeleteDocument = async (documentId: string) => {
+    if (!selectedWorkType) return;
+
+    Alert.alert(
+      'Delete Document',
+      'Are you sure you want to delete this document?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('work_documents')
+                .delete()
+                .eq('id', documentId);
+
+              if (error) throw error;
+
+              fetchDocuments(selectedWorkType.id);
+            } catch (error: any) {
+              Alert.alert('Error', error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const fetchDocuments = async (workTypeId: string) => {
     try {
       const { data, error } = await supabase
@@ -191,11 +221,11 @@ const WorkTypesScreen = ({ navigation }: any) => {
             <Text variant="titleMedium" style={styles.title}>
               {item.name}
             </Text>
-            {item.description && (
+            {item.description ? (
               <Text variant="bodyMedium" style={styles.description}>
                 {item.description}
               </Text>
-            )}
+            ) : null}
           </View>
           <View style={styles.actionsContainer}>
             <IconButton
@@ -307,6 +337,13 @@ const WorkTypesScreen = ({ navigation }: any) => {
                   title={doc.document_name}
                   description={`Step ${index + 1} ${doc.is_required ? '(Required)' : '(Optional)'}`}
                   left={(props) => <List.Icon {...props} icon="file-document" />}
+                  right={() => (
+                    <IconButton
+                      icon="delete"
+                      size={20}
+                      onPress={() => handleDeleteDocument(doc.id)}
+                    />
+                  )}
                 />
               ))}
             </List.Section>

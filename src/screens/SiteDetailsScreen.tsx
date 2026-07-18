@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ActivityIndicator, Card, Text } from 'react-native-paper';
 import { supabase } from '../config/supabase';
+import { useAuth } from '../hooks/useAuth';
 import { Site } from '../types';
 
 interface SiteFinancials {
@@ -24,6 +25,7 @@ const SiteDetailsScreen = ({ navigation, route }: any) => {
     expense_breakdown: { labour: 0, transport: 0, equipment: 0, misc: 0 }
   });
   const [loading, setLoading] = useState(true);
+  const { isRoot } = useAuth();
 
   useEffect(() => {
     fetchSiteDetails();
@@ -187,7 +189,7 @@ const SiteDetailsScreen = ({ navigation, route }: any) => {
 
           <View style={styles.divider} />
 
-          {site.client_name && (
+          {!!site.client_name && (
             <View style={styles.infoRow}>
               <View style={[styles.infoIcon, { backgroundColor: '#667eea15' }]}>
                 <Ionicons name="person" size={20} color="#667eea" />
@@ -203,7 +205,7 @@ const SiteDetailsScreen = ({ navigation, route }: any) => {
             </View>
           )}
 
-          {site.location && (
+          {!!site.location && (
             <View style={styles.infoRow}>
               <View style={[styles.infoIcon, { backgroundColor: '#27ae6015' }]}>
                 <Ionicons name="location" size={20} color="#27ae60" />
@@ -219,7 +221,7 @@ const SiteDetailsScreen = ({ navigation, route }: any) => {
             </View>
           )}
 
-          {site.start_date && (
+          {!!site.start_date && (
             <View style={styles.infoRow}>
               <View style={[styles.infoIcon, { backgroundColor: '#3498db15' }]}>
                 <Ionicons name="calendar" size={20} color="#3498db" />
@@ -241,76 +243,78 @@ const SiteDetailsScreen = ({ navigation, route }: any) => {
         </Card.Content>
       </Card>
 
-      {/* Financial Summary Card */}
-      <Card style={styles.financialCard} mode="elevated" elevation={3}>
-        <LinearGradient
-          colors={['#667eea', '#764ba2']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.financialGradient}
-        >
-          <Card.Content style={styles.financialContent}>
-            <View style={styles.financialHeader}>
-              <Ionicons name="bar-chart" size={24} color="white" />
-              <Text variant="titleLarge" style={styles.financialTitle}>
-                Financial Overview
-              </Text>
-            </View>
+      {/* Financial Summary Card - Only shown to root users */}
+      {isRoot && (
+        <Card style={styles.financialCard} mode="elevated" elevation={3}>
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.financialGradient}
+          >
+            <Card.Content style={styles.financialContent}>
+              <View style={styles.financialHeader}>
+                <Ionicons name="bar-chart" size={24} color="white" />
+                <Text variant="titleLarge" style={styles.financialTitle}>
+                  Financial Overview
+                </Text>
+              </View>
 
-            {/* Main Financial Stats */}
-            <View style={styles.mainStats}>
-              <View style={styles.statBox}>
-                <View style={styles.statIconContainer}>
-                  <Ionicons name="cash-outline" size={20} color="#fff" />
+              {/* Main Financial Stats */}
+              <View style={styles.mainStats}>
+                <View style={styles.statBox}>
+                  <View style={styles.statIconContainer}>
+                    <Ionicons name="cash-outline" size={20} color="#fff" />
+                  </View>
+                  <Text variant="labelSmall" style={styles.statLabel}>
+                    Estimated Amount
+                  </Text>
+                  <Text variant="headlineSmall" style={styles.statAmount}>
+                    {formatCurrency(estimatedCost)}
+                  </Text>
                 </View>
-                <Text variant="labelSmall" style={styles.statLabel}>
-                  Estimated Amount
-                </Text>
-                <Text variant="headlineSmall" style={styles.statAmount}>
-                  {formatCurrency(estimatedCost)}
-                </Text>
-              </View>
 
-              <View style={styles.statBox}>
-                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.3)' }]}>
-                  <Ionicons name="trending-down-outline" size={20} color="#fff" />
+                <View style={styles.statBox}>
+                  <View style={[styles.statIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.3)' }]}>
+                    <Ionicons name="trending-down-outline" size={20} color="#fff" />
+                  </View>
+                  <Text variant="labelSmall" style={styles.statLabel}>
+                    Total Expenses
+                  </Text>
+                  <Text variant="headlineSmall" style={styles.statAmount}>
+                    {formatCurrency(financials.total_expenses)}
+                  </Text>
                 </View>
-                <Text variant="labelSmall" style={styles.statLabel}>
-                  Total Expenses
-                </Text>
-                <Text variant="headlineSmall" style={styles.statAmount}>
-                  {formatCurrency(financials.total_expenses)}
-                </Text>
               </View>
-            </View>
 
-            {/* Profit Card */}
-            <View style={[styles.profitBox, isProfitable ? styles.profitPositive : styles.profitNegative]}>
-              <View style={styles.profitHeader}>
-                <Ionicons 
-                  name={isProfitable ? "trending-up" : "trending-down"} 
-                  size={24} 
-                  color={isProfitable ? "#10b981" : "#ef4444"} 
-                />
-                <Text variant="titleMedium" style={[styles.profitLabel, { color: isProfitable ? "#10b981" : "#ef4444" }]}>
-                  {isProfitable ? "Profit" : "Loss"}
+              {/* Profit Card */}
+              <View style={[styles.profitBox, isProfitable ? styles.profitPositive : styles.profitNegative]}>
+                <View style={styles.profitHeader}>
+                  <Ionicons 
+                    name={isProfitable ? "trending-up" : "trending-down"} 
+                    size={24} 
+                    color={isProfitable ? "#10b981" : "#ef4444"} 
+                  />
+                  <Text variant="titleMedium" style={[styles.profitLabel, { color: isProfitable ? "#10b981" : "#ef4444" }]}>
+                    {isProfitable ? "Profit" : "Loss"}
+                  </Text>
+                </View>
+                <Text variant="headlineLarge" style={[styles.profitAmount, { color: isProfitable ? "#10b981" : "#ef4444" }]}>
+                  {formatCurrency(Math.abs(profit))}
                 </Text>
+                {estimatedCost > 0 && (
+                  <Text variant="bodyMedium" style={styles.profitMargin}>
+                    {profitMargin.toFixed(1)}% margin
+                  </Text>
+                )}
               </View>
-              <Text variant="headlineLarge" style={[styles.profitAmount, { color: isProfitable ? "#10b981" : "#ef4444" }]}>
-                {formatCurrency(Math.abs(profit))}
-              </Text>
-              {estimatedCost > 0 && (
-                <Text variant="bodyMedium" style={styles.profitMargin}>
-                  {profitMargin.toFixed(1)}% margin
-                </Text>
-              )}
-            </View>
-          </Card.Content>
-        </LinearGradient>
-      </Card>
+            </Card.Content>
+          </LinearGradient>
+        </Card>
+      )}
 
-      {/* Expense Breakdown Card */}
-      {financials.total_expenses > 0 && (
+      {/* Expense Breakdown Card - Only shown to root users */}
+      {isRoot && financials.total_expenses > 0 && (
         <Card style={styles.breakdownCard} mode="elevated" elevation={2}>
           <Card.Content style={styles.breakdownContent}>
             <View style={styles.breakdownHeader}>

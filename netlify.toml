@@ -1,0 +1,17 @@
+# Netlify deployment config for the Expo (React Native Web) app.
+# Builds the web bundle with Expo's static export and serves it as an SPA.
+
+[build]
+  command = "npx expo export --platform web --output-dir dist"
+  publish = "dist"
+
+[build.environment]
+  # Expo SDK 57 / React Native 0.83 require Node 20+
+  NODE_VERSION = "20"
+
+# Single-page app: every route falls back to index.html so client-side
+# navigation (react-navigation) works on deep links / refresh.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -7,11 +7,13 @@ import React from 'react';
 // Screens
 import AddMaterialScreen from '../screens/AddMaterialScreen';
 import AddSiteScreen from '../screens/AddSiteScreen';
+import AddUserScreen from '../screens/AddUserScreen';
 import ExpensesScreen from '../screens/ExpensesScreen';
 import GSTScreen from '../screens/GSTScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ITRScreen from '../screens/ITRScreen';
 import MaterialIssueScreen from '../screens/MaterialIssueScreen';
+import MyTasksScreen from '../screens/MyTasksScreen';
 import PurchaseHistoryScreen from '../screens/PurchaseHistoryScreen';
 import PurchaseScreen from '../screens/PurchaseScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -19,7 +21,9 @@ import SiteDetailsScreen from '../screens/SiteDetailsScreen';
 import SiteDocumentationScreen from '../screens/SiteDocumentationScreen';
 import SitesScreen from '../screens/SitesScreen';
 import SiteTasksScreen from '../screens/SiteTasksScreen';
+import SubtaskManager from '../screens/SubtaskManager';
 import StockScreen from '../screens/StockScreen';
+import UserManagementScreen from '../screens/UserManagementScreen';
 import WorkTypesScreen from '../screens/WorkTypesScreen';
 
 const Stack = createNativeStackNavigator();
@@ -34,6 +38,8 @@ function MainTabs() {
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'MyTasks') {
+            iconName = focused ? 'checkbox' : 'checkbox-outline';
           } else if (route.name === 'Sites') {
             iconName = focused ? 'business' : 'business-outline';
           } else if (route.name === 'Stock') {
@@ -49,6 +55,11 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen 
+        name="MyTasks" 
+        component={MyTasksScreen}
+        options={{ title: 'My Tasks' }}
+      />
       <Tab.Screen name="Sites" component={SitesScreen} />
       <Tab.Screen name="Stock" component={StockScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
@@ -91,6 +102,11 @@ export default function AppNavigator() {
           options={{ title: 'Site Tasks' }}
         />
         <Stack.Screen
+          name="SubtaskManager"
+          component={SubtaskManager}
+          options={{ title: 'Manage Subtasks' }}
+        />
+        <Stack.Screen
           name="AddMaterial"
           component={AddMaterialScreen}
           options={{ title: 'Add Material' }}
@@ -124,6 +140,16 @@ export default function AppNavigator() {
           name="SiteDocumentation"
           component={SiteDocumentationScreen}
           options={{ title: 'Documentation Tracking' }}
+        />
+        <Stack.Screen
+          name="UserManagement"
+          component={UserManagementScreen}
+          options={{ title: 'User Management' }}
+        />
+        <Stack.Screen
+          name="AddUser"
+          component={AddUserScreen}
+          options={{ title: 'Add User' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

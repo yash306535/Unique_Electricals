@@ -346,12 +346,12 @@ const SiteDocumentationScreen = ({ route }: any) => {
                   >
                     {doc.work_documents?.document_name || 'Unnamed Document'}
                   </Text>
-                  {doc.is_completed && (
+                  {!!doc.is_completed && (
                     <Text variant="bodySmall" style={styles.completedStatus}>
                       ✓ Completed
                     </Text>
                   )}
-                  {doc.completed_at && (
+                  {!!doc.completed_at && (
                     <View style={styles.completedBadge}>
                       <Ionicons name="calendar" size={12} color="#10b981" />
                       <Text variant="bodySmall" style={styles.completedDate}>
@@ -360,7 +360,7 @@ const SiteDocumentationScreen = ({ route }: any) => {
                     </View>
                   )}
                 </View>
-                {doc.is_completed && (
+                {!!doc.is_completed && (
                   <View style={styles.completedIconContainer}>
                     <Ionicons name="checkmark-done-circle" size={24} color="#10b981" />
                   </View>
@@ -473,7 +473,7 @@ const SiteDocumentationScreen = ({ route }: any) => {
                         </View>
                       </View>
 
-                      {desk.assigned_to && (
+                      {!!desk.assigned_to && (
                         <View style={styles.deskRow}>
                           <View style={styles.deskIconBg}>
                             <Ionicons name="person" size={20} color="#6200ee" />
@@ -485,7 +485,7 @@ const SiteDocumentationScreen = ({ route }: any) => {
                         </View>
                       )}
 
-                      {desk.notes && (
+                      {!!desk.notes && (
                         <View style={styles.notesContainer}>
                           <View style={styles.notesHeader}>
                             <Ionicons name="document-text" size={16} color="#6200ee" />

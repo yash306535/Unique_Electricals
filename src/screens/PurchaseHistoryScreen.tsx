@@ -245,7 +245,7 @@ const PurchaseHistoryScreen = ({ navigation }: any) => {
             <View style={styles.headerLeft}>
               <View style={styles.iconWrapper}>
                 <Ionicons name="cube" size={26} color="#27ae60" />
-                {item.has_bill && (
+                {!!item.has_bill && (
                   <View style={styles.billBadge}>
                     <Ionicons name="receipt" size={11} color="#27ae60" />
                   </View>
@@ -317,7 +317,7 @@ const PurchaseHistoryScreen = ({ navigation }: any) => {
                 </View>
               </View>
 
-              {item.bill_photo_url && (
+              {!!item.bill_photo_url && (
                 <View style={styles.billSection}>
                   <Text style={styles.sectionTitle}>Bill Photo</Text>
                   <TouchableOpacity>

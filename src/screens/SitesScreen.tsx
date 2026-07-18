@@ -5,6 +5,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, Card, Chip, FAB, Searchbar, Text } from 'react-native-paper';
 import { supabase } from '../config/supabase';
+import { useAuth } from '../hooks/useAuth';
 import { Site } from '../types';
 
 interface SiteWithFinancials extends Site {
@@ -16,6 +17,7 @@ const SitesScreen = ({ navigation }: any) => {
   const [sites, setSites] = useState<SiteWithFinancials[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const { isRoot } = useAuth();
 
   const fetchSites = async () => {
     try {
@@ -122,7 +124,7 @@ const SitesScreen = ({ navigation }: any) => {
     const statusConfig = getStatusConfig(item.status);
     const profitMargin = item.estimated_cost ? ((item.profit / item.estimated_cost) * 100) : 0;
     const isProfitable = item.profit >= 0;
-    
+
     return (
       <Card style={styles.card} mode="elevated" elevation={2}>
         <TouchableOpacity
@@ -155,60 +157,62 @@ const SitesScreen = ({ navigation }: any) => {
 
               <View style={styles.divider} />
 
-              {/* Financial Summary Section */}
-              <View style={styles.financialSection}>
-                <View style={styles.financialRow}>
-                  <View style={styles.financialItem}>
-                    <View style={styles.financialIconContainer}>
-                      <Ionicons name="cash-outline" size={18} color="#8b5cf6" />
+              {/* Financial Summary Section - Only shown to root users */}
+              {isRoot && (
+                <View style={styles.financialSection}>
+                  <View style={styles.financialRow}>
+                    <View style={styles.financialItem}>
+                      <View style={styles.financialIconContainer}>
+                        <Ionicons name="cash-outline" size={18} color="#8b5cf6" />
+                      </View>
+                      <View>
+                        <Text variant="labelSmall" style={styles.financialLabel}>Estimated</Text>
+                        <Text variant="bodyLarge" style={styles.financialValue}>
+                          {formatCurrency(item.estimated_cost || 0)}
+                        </Text>
+                      </View>
                     </View>
-                    <View>
-                      <Text variant="labelSmall" style={styles.financialLabel}>Estimated</Text>
-                      <Text variant="bodyLarge" style={styles.financialValue}>
-                        {formatCurrency(item.estimated_cost || 0)}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.financialItem}>
-                    <View style={[styles.financialIconContainer, { backgroundColor: '#fee2e2' }]}>
-                      <Ionicons name="trending-down-outline" size={18} color="#ef4444" />
-                    </View>
-                    <View>
-                      <Text variant="labelSmall" style={styles.financialLabel}>Expenses</Text>
-                      <Text variant="bodyLarge" style={styles.financialValue}>
-                        {formatCurrency(item.total_expenses)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
 
-                <View style={[styles.profitCard, isProfitable ? styles.profitCardPositive : styles.profitCardNegative]}>
-                  <View style={styles.profitHeader}>
-                    <Ionicons 
-                      name={isProfitable ? "trending-up" : "trending-down"} 
-                      size={20} 
-                      color={isProfitable ? "#10b981" : "#ef4444"} 
-                    />
-                    <Text variant="labelMedium" style={[styles.profitLabel, { color: isProfitable ? "#10b981" : "#ef4444" }]}>
-                      {isProfitable ? "Profit" : "Loss"}
-                    </Text>
+                    <View style={styles.financialItem}>
+                      <View style={[styles.financialIconContainer, { backgroundColor: '#fee2e2' }]}>
+                        <Ionicons name="trending-down-outline" size={18} color="#ef4444" />
+                      </View>
+                      <View>
+                        <Text variant="labelSmall" style={styles.financialLabel}>Expenses</Text>
+                        <Text variant="bodyLarge" style={styles.financialValue}>
+                          {formatCurrency(item.total_expenses)}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                  <Text variant="headlineSmall" style={[styles.profitAmount, { color: isProfitable ? "#10b981" : "#ef4444" }]}>
-                    {formatCurrency(Math.abs(item.profit))}
-                  </Text>
-                  {item.estimated_cost && item.estimated_cost > 0 && (
-                    <Text variant="bodySmall" style={styles.profitMargin}>
-                      {profitMargin.toFixed(1)}% margin
+
+                  <View style={[styles.profitCard, isProfitable ? styles.profitCardPositive : styles.profitCardNegative]}>
+                    <View style={styles.profitHeader}>
+                      <Ionicons
+                        name={isProfitable ? "trending-up" : "trending-down"}
+                        size={20}
+                        color={isProfitable ? "#10b981" : "#ef4444"}
+                      />
+                      <Text variant="labelMedium" style={[styles.profitLabel, { color: isProfitable ? "#10b981" : "#ef4444" }]}>
+                        {isProfitable ? "Profit" : "Loss"}
+                      </Text>
+                    </View>
+                    <Text variant="headlineSmall" style={[styles.profitAmount, { color: isProfitable ? "#10b981" : "#ef4444" }]}>
+                      {formatCurrency(Math.abs(item.profit))}
                     </Text>
-                  )}
+                    {item.estimated_cost && item.estimated_cost > 0 && (
+                      <Text variant="bodySmall" style={styles.profitMargin}>
+                        {profitMargin.toFixed(1)}% margin
+                      </Text>
+                    )}
+                  </View>
                 </View>
-              </View>
+              )}
 
               <View style={styles.divider} />
 
               <View style={styles.infoContainer}>
-                {item.client_name && (
+                {!!item.client_name && (
                   <View style={styles.infoRow}>
                     <View style={styles.infoIconContainer}>
                       <Ionicons name="person" size={18} color="#6366f1" />
@@ -222,7 +226,7 @@ const SitesScreen = ({ navigation }: any) => {
                   </View>
                 )}
 
-                {item.location && (
+                {!!item.location && (
                   <View style={styles.infoRow}>
                     <View style={styles.infoIconContainer}>
                       <Ionicons name="location" size={18} color="#ec4899" />
@@ -236,7 +240,7 @@ const SitesScreen = ({ navigation }: any) => {
                   </View>
                 )}
 
-                {item.start_date && (
+                {!!item.start_date && (
                   <View style={styles.infoRow}>
                     <View style={styles.infoIconContainer}>
                       <Ionicons name="calendar" size={18} color="#10b981" />
@@ -312,12 +316,14 @@ const SitesScreen = ({ navigation }: any) => {
               {sites.filter(s => s.status === 'active').length}
             </Text>
           </View>
-          <View style={styles.statCard}>
-            <Text variant="labelSmall" style={styles.statLabel}>Net Profit</Text>
-            <Text variant="titleMedium" style={[styles.statValue, { color: totalProfit >= 0 ? '#10b981' : '#ef4444' }]}>
-              {formatCurrency(Math.abs(totalProfit))}
-            </Text>
-          </View>
+          {isRoot && (
+            <View style={styles.statCard}>
+              <Text variant="labelSmall" style={styles.statLabel}>Net Profit</Text>
+              <Text variant="titleMedium" style={[styles.statValue, { color: totalProfit >= 0 ? '#10b981' : '#ef4444' }]}>
+                {formatCurrency(Math.abs(totalProfit))}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 

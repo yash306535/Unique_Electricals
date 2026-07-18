@@ -4,6 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Card, Divider, Text } from 'react-native-paper';
+import { useAuth } from '../context/AuthContext';
 
 type RootStackParamList = {
   WorkTypes: undefined;
@@ -14,6 +15,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const SettingsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { logout, isRoot, user } = useAuth();
 
   const handleDataBackup = () => {
     Alert.alert(
@@ -28,6 +30,21 @@ const SettingsScreen = () => {
       'About',
       'Construction Manager v1.0.0\n\nBuilt for contractors to manage sites, stock, and finances.\n\nDeveloped with ❤️',
       [{ text: 'OK' }]
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => logout()
+        }
+      ]
     );
   };
 
@@ -94,6 +111,28 @@ const SettingsScreen = () => {
         </Card.Content>
       </Card>
 
+      {/* User Information Card */}
+      <Card style={styles.userCard} mode="elevated">
+        <Card.Content style={styles.userContent}>
+          <View style={styles.userIconContainer}>
+            <Ionicons name={isRoot ? "person-circle" : "person"} size={48} color={isRoot ? "#e67e22" : "#2089dc"} />
+          </View>
+          <View style={styles.userInfo}>
+            <Text variant="titleLarge" style={styles.userName}>
+              {user?.name || user?.email || 'User'}
+            </Text>
+            <Text variant="bodyMedium" style={styles.userRole}>
+              {isRoot ? 'Root Administrator' : 'Regular User'}
+            </Text>
+            {user?.email && (
+              <Text variant="bodySmall" style={styles.userEmail}>
+                {user.email}
+              </Text>
+            )}
+          </View>
+        </Card.Content>
+      </Card>
+
       <View style={styles.optionsContainer}>
         {settingsOptions.map((option, index) => (
           <View key={option.id}>
@@ -116,12 +155,30 @@ const SettingsScreen = () => {
             {index < settingsOptions.length - 1 && <Divider style={styles.divider} />}
           </View>
         ))}
+
+        {/* Logout Button */}
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Card style={[styles.optionCard, styles.logoutCard]} mode="elevated">
+            <Card.Content style={styles.optionContent}>
+              <View style={[styles.iconContainer, { backgroundColor: '#e74c3c20' }]}>
+                <Ionicons name="log-out" size={24} color="#e74c3c" />
+              </View>
+              <View style={styles.optionText}>
+                <Text variant="titleMedium" style={[styles.optionTitle, styles.logoutText]}>Logout</Text>
+                <Text variant="bodySmall" style={styles.optionDescription}>
+                  Sign out of your account
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#e74c3c" />
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.footer}>
         <Text variant="titleLarge" style={styles.footerText}>Construction Manager</Text>
         <Text variant="bodyMedium" style={styles.footerVersion}>Version 1.0.0</Text>
-        <Text variant="bodySmall" style={styles.footerCopyright}>© 2024 All rights reserved</Text>
+        <Text variant="bodySmall" style={styles.footerCopyright}> 2024 All rights reserved</Text>
       </View>
     </ScrollView>
   );
@@ -198,6 +255,44 @@ const styles = StyleSheet.create({
   footerCopyright: {
     color: '#999',
     marginTop: 5,
+  },
+  userCard: {
+    margin: 10,
+    marginTop: 5,
+  },
+  userContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  userIconContainer: {
+    marginRight: 15,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  userRole: {
+    color: '#666',
+    marginTop: 2,
+  },
+  userEmail: {
+    color: '#888',
+    marginTop: 4,
+    fontSize: 12,
+  },
+  logoutButton: {
+    marginTop: 10,
+  },
+  logoutCard: {
+    borderColor: '#e74c3c20',
+    borderWidth: 1,
+  },
+  logoutText: {
+    color: '#e74c3c',
   },
 });
 

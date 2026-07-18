@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from '../components/DateTimePicker';
 import { Picker } from '@react-native-picker/picker';
 import React, { useEffect, useState } from 'react';
 import {
@@ -464,7 +464,7 @@ const MaterialIssueScreen = ({ route }: any) => {
                 ) : null}
               </View>
 
-              {formData.material_id && (
+              {!!formData.material_id && (
                 <Card style={styles.stockCard} mode="outlined">
                   <Card.Content style={styles.stockCardContent}>
                     <View style={styles.stockIconContainer}>

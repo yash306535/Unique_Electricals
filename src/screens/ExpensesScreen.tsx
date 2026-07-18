@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from '../components/DateTimePicker';
 import { Picker } from '@react-native-picker/picker';
 import React, { useEffect, useState } from 'react';
 import {
@@ -267,7 +267,7 @@ const ExpensesScreen = ({ route }: any) => {
             </View>
           </View>
 
-          {item.description && (
+          {!!item.description && (
             <View style={styles.descriptionContainer}>
               <Text variant="bodyMedium" style={styles.description}>
                 {item.description}

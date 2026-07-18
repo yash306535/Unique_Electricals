@@ -1,20 +1,24 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
-import { Text, Card, Divider, Badge } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
+import { Alert, Platform, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Badge, Card, Text } from 'react-native-paper';
 import { supabase } from '../config/supabase';
-import { Site, Material, SiteTask } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { Material, Site, SiteTask } from '../types';
 
 const HomeScreen = ({ navigation }: any) => {
+  const { isRoot, user } = useAuth();
   const [activeSites, setActiveSites] = useState<Site[]>([]);
   const [lowStockMaterials, setLowStockMaterials] = useState<Material[]>([]);
   const [pendingTasks, setPendingTasks] = useState<SiteTask[]>([]);
+  const [myTasks, setMyTasks] = useState<SiteTask[]>([]);
   const [stats, setStats] = useState({
     totalSites: 0,
     activeSites: 0,
     totalMaterials: 0,
     pendingTasks: 0,
+    myTasksCount: 0,
   });
   const [refreshing, setRefreshing] = useState(false);
 
@@ -63,12 +67,31 @@ const HomeScreen = ({ navigation }: any) => {
       if (tasksError) throw tasksError;
       setPendingTasks(tasksData || []);
 
+      // Fetch My Tasks (tasks assigned to current user, not completed)
+      let myTasksData = [];
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('site_tasks')
+          .select(`
+            *,
+            site:sites(name)
+          `)
+          .eq('assigned_to', user.id)
+          .neq('status', 'completed')
+          .order('expected_date');
+
+        if (error) throw error;
+        myTasksData = data || [];
+      }
+      setMyTasks(myTasksData.slice(0, 5));
+
       // Update stats
       setStats({
         totalSites: allSites.length,
         activeSites: active.length,
         totalMaterials: materialsData?.length || 0,
         pendingTasks: tasksData?.length || 0,
+        myTasksCount: myTasksData.length,
       });
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -87,7 +110,7 @@ const HomeScreen = ({ navigation }: any) => {
     setRefreshing(false);
   };
 
-  const modules = [
+  const getAllModules = () => [
     {
       id: '1',
       title: 'Project Sites',
@@ -96,6 +119,7 @@ const HomeScreen = ({ navigation }: any) => {
       screen: 'Sites',
       description: 'Manage electrical projects',
       badge: stats.activeSites,
+      roleRequired: null, // Available to all users
     },
     {
       id: '2',
@@ -105,6 +129,7 @@ const HomeScreen = ({ navigation }: any) => {
       screen: 'Stock',
       description: 'Wires, MCBs, switches & tools',
       badge: lowStockMaterials.length,
+      roleRequired: null, // Available to all users
     },
     {
       id: '3',
@@ -113,6 +138,7 @@ const HomeScreen = ({ navigation }: any) => {
       color: '#4ECDC4',
       screen: 'PurchaseHistory',
       description: 'Track material purchases',
+      roleRequired: 'root', // Only for root users
     },
     {
       id: '4',
@@ -121,6 +147,7 @@ const HomeScreen = ({ navigation }: any) => {
       color: '#95E1D3',
       screen: 'GST',
       description: 'Tax compliance & invoices',
+      roleRequired: 'root', // Only for root users
     },
     {
       id: '5',
@@ -129,8 +156,22 @@ const HomeScreen = ({ navigation }: any) => {
       color: '#6C5CE7',
       screen: 'ITR',
       description: 'Income, expenses & profit',
+      roleRequired: 'root', // Only for root users
+    },
+    {
+      id: '6',
+      title: 'User Management',
+      icon: 'people',
+      color: '#FF6B35',
+      screen: 'UserManagement',
+      description: 'Manage system users',
+      roleRequired: 'root', // Only for root users
     },
   ];
+
+  const modules = getAllModules().filter(module => 
+    module.roleRequired === null || (module.roleRequired === 'root' && isRoot)
+  );
 
   const getTaskPriority = (expectedDate?: string) => {
     if (!expectedDate) return 'low';
@@ -382,7 +423,7 @@ const HomeScreen = ({ navigation }: any) => {
                           {(task as any).site?.name || 'Unknown Site'}
                         </Text>
                       </View>
-                      {task.expected_date && (
+                      {!!task.expected_date && (
                         <View style={styles.taskMetaRow}>
                           <Ionicons name="calendar-outline" size={14} color="#8E8E93" />
                           <Text variant="bodySmall" style={styles.taskDueDate}>
@@ -391,6 +432,74 @@ const HomeScreen = ({ navigation }: any) => {
                               month: 'short',
                               year: 'numeric'
                             })}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </Card.Content>
+              </Card>
+            );
+          })}
+        </View>
+      )}
+
+      {/* My Tasks - Tasks assigned to current user */}
+      {myTasks.length > 0 && (
+        <View style={styles.section}>
+          <View style={[styles.sectionHeader, styles.cardSectionHeader]}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="checkmark-done" size={24} color="#059669" />
+              <Text variant="titleLarge" style={styles.sectionTitle}>
+                My Tasks
+              </Text>
+            </View>
+            <Badge style={{ backgroundColor: '#059669' }}>{stats.myTasksCount}</Badge>
+          </View>
+          
+          {myTasks.map((task) => {
+            const priority = getTaskPriority(task.expected_date);
+            return (
+              <Card key={task.id} style={[styles.taskCard, styles.shadowCard]} mode="elevated">
+                <Card.Content>
+                  <View style={styles.taskRow}>
+                    <View style={[styles.taskPriorityBar, { backgroundColor: '#059669' }]} />
+                    <View style={styles.taskMainContent}>
+                      <View style={styles.taskHeader}>
+                        <Text variant="titleSmall" style={styles.taskTitle}>
+                          {task.task_name}
+                        </Text>
+                        {priority === 'overdue' && (
+                          <Badge style={styles.taskOverdueBadge}>Overdue</Badge>
+                        )}
+                      </View>
+                      <View style={styles.taskMetaRow}>
+                        <Ionicons name="flash-outline" size={14} color="#059669" />
+                        <Text variant="bodySmall" style={{ ...styles.taskSiteName, color: '#059669' }}>
+                          {(task as any).site?.name || 'Unknown Site'}
+                        </Text>
+                      </View>
+                      {!!task.expected_date && (
+                        <View style={styles.taskMetaRow}>
+                          <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+                          <Text variant="bodySmall" style={styles.taskDueDate}>
+                            {new Date(task.expected_date).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </Text>
+                        </View>
+                      )}
+                      {!!task.status && (
+                        <View style={styles.taskMetaRow}>
+                          <Ionicons 
+                            name={task.status === 'in_progress' ? 'play-circle-outline' : 'ellipse'} 
+                            size={12} 
+                            color={task.status === 'completed' ? '#10b981' : task.status === 'in_progress' ? '#3b82f6' : '#f59e0b'} 
+                          />
+                          <Text variant="bodySmall" style={{ marginLeft: 6, color: '#6B7280' }}>
+                            {task.status === 'in_progress' ? 'In Progress' : task.status === 'completed' ? 'Completed' : 'Pending'}
                           </Text>
                         </View>
                       )}
@@ -510,6 +619,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    ...(Platform.OS === 'web' && {
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+      elevation: 0,
+    }),
   },
   statGradient: {
     padding: 16,

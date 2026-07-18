@@ -1,9 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Supabase credentials (hard-coded)
-const SUPABASE_URL = 'https://izzcbcjdowlxbtpewnxc.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_EHasNMZ7Zv0IsvsjMW6PJA_M7UByCnM';
+// Supabase credentials — single source of truth is the .env file.
+// (EXPO_PUBLIC_* vars are inlined into the bundle by Expo at build time.)
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    'Missing Supabase config. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_KEY in your .env file.'
+  );
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

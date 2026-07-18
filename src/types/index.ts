@@ -60,9 +60,33 @@ export interface SiteTask {
   task_type?: 'approval' | 'work' | 'follow-up';
   description?: string;
   expected_date?: string;
-  status: 'pending' | 'completed';
+  status: 'pending' | 'completed' | 'in_progress';
   completed_date?: string;
   created_at?: string;
+  updated_at?: string;
+  assigned_to?: string;
+  assigned_user_name?: string;
+  parent_task_id?: string;
+  created_by?: string;
+  is_subtask?: boolean;
+  site?: Site;
+}
+
+export interface SiteSubtask {
+  id: string;
+  parent_task_id: string;
+  site_id: string;
+  subtask_name: string;
+  description?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  assigned_to?: string;
+  assigned_user_name?: string;
+  expected_date?: string;
+  completed_date?: string;
+  order_index: number;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
 }
 
 export interface GSTSummary {
