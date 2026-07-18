@@ -12,9 +12,11 @@ export interface Site {
 export interface Expense {
   id: string;
   site_id: string;
-  category: 'labour' | 'transport' | 'equipment' | 'misc';
+  category: 'labour' | 'transport' | 'equipment' | 'misc' | string;
   amount: number;
   description?: string;
+  labour_count?: number | null;
+  transport_name?: string | null;
   date: string;
   created_at?: string;
 }
@@ -22,6 +24,7 @@ export interface Expense {
 export interface Material {
   id: string;
   name: string;
+  sub_type?: string | null;
   unit: string;
   current_stock: number;
   created_at?: string;

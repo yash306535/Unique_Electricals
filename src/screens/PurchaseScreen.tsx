@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '../components/DateTimePicker';
 import { supabase } from '../config/supabase';
+import { materialLabel } from '../utils/material';
 import { Material } from '../types';
 
 const PurchaseScreen = ({ navigation, route }: any) => {
@@ -225,7 +226,7 @@ const PurchaseScreen = ({ navigation, route }: any) => {
                   {materials.map((material) => (
                     <Picker.Item
                       key={material.id}
-                      label={`${material.name} (${material.unit})`}
+                      label={`${materialLabel(material)} (${material.unit})`}
                       value={material.id}
                     />
                   ))}

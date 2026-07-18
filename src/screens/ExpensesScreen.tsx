@@ -13,9 +13,10 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { Button, Card, FAB, Modal, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
+import { Button, Card, FAB, Menu, Modal, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
 import { supabase } from '../config/supabase';
 import { Expense } from '../types';
+import { buildExpenseChallanHtml, downloadChallan } from '../utils/challan';
 
 const ExpensesScreen = ({ route }: any) => {
   const { siteId, siteName } = route.params;
@@ -27,6 +28,9 @@ const ExpensesScreen = ({ route }: any) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
+  const [transportOptions, setTransportOptions] = useState<string[]>([]);
+  const [transportMenuVisible, setTransportMenuVisible] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   
   // Snackbar states
   const [snackbar, setSnackbar] = useState({
@@ -42,12 +46,36 @@ const ExpensesScreen = ({ route }: any) => {
     category: 'labour' as string,
     amount: '',
     description: '',
+    labour_count: '',
+    transport_name: '',
     date: new Date().toISOString().split('T')[0],
   });
 
   useEffect(() => {
     fetchExpenses();
+    fetchTransportOptions();
   }, [siteId]);
+
+  // Remembered transport names: distinct values from all previous transport expenses.
+  const fetchTransportOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('transport_name')
+        .not('transport_name', 'is', null);
+      if (error) throw error;
+      const names = Array.from(
+        new Set(
+          (data || [])
+            .map((r: any) => (r.transport_name || '').trim())
+            .filter((n: string) => n.length > 0)
+        )
+      ).sort();
+      setTransportOptions(names);
+    } catch {
+      // Non-fatal: dropdown just stays empty if the column isn't there yet.
+    }
+  };
 
   useEffect(() => {
     if (expenses.length > 0) {
@@ -92,6 +120,8 @@ const ExpensesScreen = ({ route }: any) => {
         category: isCustomCategory ? 'other' : expense.category,
         amount: expense.amount.toString(),
         description: expense.description || '',
+        labour_count: expense.labour_count != null ? String(expense.labour_count) : '',
+        transport_name: expense.transport_name || '',
         date: expense.date,
       });
       
@@ -110,6 +140,8 @@ const ExpensesScreen = ({ route }: any) => {
         category: 'labour',
         amount: '',
         description: '',
+        labour_count: '',
+        transport_name: '',
         date: new Date().toISOString().split('T')[0],
       });
       setShowCustomCategory(false);
@@ -151,12 +183,20 @@ const ExpensesScreen = ({ route }: any) => {
 
     try {
       const finalCategory = formData.category === 'other' ? customCategory.trim().toLowerCase() : formData.category;
-      
+
       const expenseData = {
         site_id: siteId,
         category: finalCategory,
         amount: parseFloat(formData.amount),
         description: formData.description || null,
+        labour_count:
+          finalCategory === 'labour' && formData.labour_count
+            ? parseInt(formData.labour_count, 10)
+            : null,
+        transport_name:
+          finalCategory === 'transport' && formData.transport_name.trim()
+            ? formData.transport_name.trim()
+            : null,
         date: formData.date,
       };
 
@@ -175,8 +215,25 @@ const ExpensesScreen = ({ route }: any) => {
 
       setModalVisible(false);
       fetchExpenses();
+      fetchTransportOptions();
     } catch (error: any) {
       showSnackbar(error.message || 'Failed to save expense', 'error');
+    }
+  };
+
+  const handleDownloadChallan = async () => {
+    if (expenses.length === 0) {
+      showSnackbar('No expenses to include in the challan', 'info');
+      return;
+    }
+    try {
+      setGeneratingPdf(true);
+      const html = buildExpenseChallanHtml(siteName, expenses);
+      await downloadChallan(html);
+    } catch (error: any) {
+      showSnackbar(error.message || 'Failed to generate challan', 'error');
+    } finally {
+      setGeneratingPdf(false);
     }
   };
 
@@ -274,6 +331,23 @@ const ExpensesScreen = ({ route }: any) => {
               </Text>
             </View>
           )}
+
+          {(!!item.labour_count || !!item.transport_name) && (
+            <View style={styles.metaRow}>
+              {!!item.labour_count && (
+                <View style={styles.metaChip}>
+                  <Ionicons name="people-outline" size={14} color="#555" />
+                  <Text style={styles.metaChipText}>{item.labour_count} labour</Text>
+                </View>
+              )}
+              {!!item.transport_name && (
+                <View style={styles.metaChip}>
+                  <Ionicons name="car-outline" size={14} color="#555" />
+                  <Text style={styles.metaChipText}>{item.transport_name}</Text>
+                </View>
+              )}
+            </View>
+          )}
         </Card.Content>
         <Card.Actions style={styles.cardActions}>
           <Button 
@@ -321,6 +395,19 @@ const ExpensesScreen = ({ route }: any) => {
             <Ionicons name="business-outline" size={14} color="white" />
             <Text variant="bodySmall" style={styles.siteNameText}> {siteName}</Text>
           </View>
+          <Button
+            mode="contained"
+            icon="file-pdf-box"
+            onPress={handleDownloadChallan}
+            loading={generatingPdf}
+            disabled={generatingPdf}
+            style={styles.challanButton}
+            buttonColor="rgba(255,255,255,0.22)"
+            textColor="white"
+            compact
+          >
+            Download Challan (PDF)
+          </Button>
         </Card.Content>
       </Card>
 
@@ -423,6 +510,65 @@ const ExpensesScreen = ({ route }: any) => {
                   activeOutlineColor="#2089dc"
                   textColor="#000000"
                 />
+
+                {formData.category === 'labour' && (
+                  <TextInput
+                    label="Number of Labourers"
+                    mode="outlined"
+                    placeholder="e.g. 9"
+                    value={formData.labour_count}
+                    onChangeText={(text) =>
+                      setFormData({ ...formData, labour_count: text.replace(/[^0-9]/g, '') })
+                    }
+                    keyboardType="numeric"
+                    left={<TextInput.Icon icon="account-group" />}
+                    style={styles.input}
+                    outlineColor="#ddd"
+                    activeOutlineColor="#2089dc"
+                    textColor="#000000"
+                  />
+                )}
+
+                {formData.category === 'transport' && (
+                  <Menu
+                    visible={transportMenuVisible}
+                    onDismiss={() => setTransportMenuVisible(false)}
+                    anchor={
+                      <TextInput
+                        label="Transport Name"
+                        mode="outlined"
+                        placeholder="Type new or pick a saved transport"
+                        value={formData.transport_name}
+                        onChangeText={(text) => setFormData({ ...formData, transport_name: text })}
+                        left={<TextInput.Icon icon="truck" />}
+                        right={
+                          transportOptions.length > 0 ? (
+                            <TextInput.Icon
+                              icon="menu-down"
+                              onPress={() => setTransportMenuVisible(true)}
+                            />
+                          ) : undefined
+                        }
+                        style={styles.input}
+                        outlineColor="#ddd"
+                        activeOutlineColor="#2089dc"
+                        textColor="#000000"
+                      />
+                    }
+                  >
+                    {transportOptions.map((name) => (
+                      <Menu.Item
+                        key={name}
+                        onPress={() => {
+                          setFormData({ ...formData, transport_name: name });
+                          setTransportMenuVisible(false);
+                        }}
+                        title={name}
+                        leadingIcon="truck"
+                      />
+                    ))}
+                  </Menu>
+                )}
 
                 <TouchableOpacity
                   style={styles.datePickerButton}
@@ -558,6 +704,31 @@ const styles = StyleSheet.create({
   siteNameText: {
     color: 'white',
     opacity: 0.9,
+  },
+  challanButton: {
+    marginTop: 14,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f1f3f5',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  metaChipText: {
+    color: '#555',
+    fontSize: 12,
+    fontWeight: '600',
   },
   listContent: {
     padding: 16,

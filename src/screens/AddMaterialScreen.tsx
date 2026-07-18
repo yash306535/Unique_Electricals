@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 const AddMaterialScreen = ({ navigation }: any) => {
   const [formData, setFormData] = useState({
     name: '',
+    sub_type: '',
     unit: '',
   });
   const [loading, setLoading] = useState(false);
@@ -90,6 +91,7 @@ const AddMaterialScreen = ({ navigation }: any) => {
 
       const { error } = await supabase.from('materials').insert({
         name: formData.name.trim(),
+        sub_type: formData.sub_type.trim() || null,
         unit: formData.unit.trim().toLowerCase(),
         current_stock: 0,
       });
@@ -147,6 +149,33 @@ const AddMaterialScreen = ({ navigation }: any) => {
               />
             </View>
             {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Sub-type / Variant (optional)</Text>
+            <View style={styles.inputWrapper}>
+              <Ionicons name="git-branch-outline" size={20} color="#5B9BD5" style={styles.inputIcon} />
+              <RNTextInput
+                placeholder="e.g. HT, LT, 1.5 sq mm"
+                placeholderTextColor="#94A3B8"
+                value={formData.sub_type}
+                onChangeText={(text) => setFormData({ ...formData, sub_type: text })}
+                style={styles.input}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
+            <View style={styles.suggestionRow}>
+              {['HT', 'LT'].map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={styles.suggestionChip}
+                  onPress={() => setFormData({ ...formData, sub_type: s })}
+                >
+                  <Text style={styles.suggestionChipText}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <View style={styles.inputContainer}>
@@ -389,6 +418,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 6,
     marginLeft: 4,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    marginLeft: 4,
+  },
+  suggestionChip: {
+    backgroundColor: '#EAF2FB',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  suggestionChipText: {
+    color: '#5B9BD5',
+    fontWeight: '700',
+    fontSize: 13,
   },
   linkRow: {
     flexDirection: 'row',

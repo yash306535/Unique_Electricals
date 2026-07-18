@@ -14,6 +14,7 @@ import {
 import { Button, Card, FAB, Modal, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
 import { supabase } from '../config/supabase';
 import { Material, MaterialIssue } from '../types';
+import { materialLabel } from '../utils/material';
 
 interface MaterialCost {
   material_name: string;
@@ -58,7 +59,7 @@ const MaterialIssueScreen = ({ route }: any) => {
         .from('material_issues')
         .select(`
           *,
-          material:materials(name, unit)
+          material:materials(name, sub_type, unit)
         `)
         .eq('site_id', siteId)
         .order('date', { ascending: false });
@@ -95,7 +96,7 @@ const MaterialIssueScreen = ({ route }: any) => {
         .select(`
           material_id,
           quantity,
-          material:materials(name, unit)
+          material:materials(name, sub_type, unit)
         `)
         .eq('site_id', siteId);
 
@@ -115,7 +116,7 @@ const MaterialIssueScreen = ({ route }: any) => {
       issuesData?.forEach((issue: any) => {
         const materialId = issue.material_id;
         const quantity = issue.quantity;
-        const materialName = issue.material?.name || 'Unknown';
+        const materialName = materialLabel(issue.material) || 'Unknown';
         const unit = issue.material?.unit || '';
 
         // Find all purchases for this material
@@ -269,7 +270,7 @@ const MaterialIssueScreen = ({ route }: any) => {
             </View>
             <View style={styles.materialDetails}>
               <Text variant="titleMedium" style={styles.materialName}>
-                {item.material?.name || 'Unknown'}
+                {materialLabel(item.material) || 'Unknown'}
               </Text>
               <View style={styles.dateContainer}>
                 <Ionicons name="calendar-outline" size={14} color="#999" />
@@ -449,7 +450,7 @@ const MaterialIssueScreen = ({ route }: any) => {
                     {materials.map((material) => (
                       <Picker.Item
                         key={material.id}
-                        label={`${material.name} (${material.current_stock} ${material.unit})`}
+                        label={`${materialLabel(material)} (${material.current_stock} ${material.unit})`}
                         value={material.id}
                         color="#000"
                       />

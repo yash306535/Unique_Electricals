@@ -1,14 +1,26 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { Text, Card, Button, FAB } from 'react-native-paper';
+import { View, StyleSheet, FlatList, ScrollView, Alert } from 'react-native';
+import { Text, Card, Button, FAB, Modal, Portal, ActivityIndicator } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../config/supabase';
 import { Material } from '../types';
+import { materialLabel } from '../utils/material';
+
+type LedgerRow = {
+  type: 'in' | 'out';
+  quantity: number;
+  date: string;
+  label: string;
+};
 
 const StockScreen = ({ navigation }: any) => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [historyMaterial, setHistoryMaterial] = useState<Material | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [ledger, setLedger] = useState<LedgerRow[]>([]);
 
   const fetchMaterials = async () => {
     try {
@@ -32,6 +44,53 @@ const StockScreen = ({ navigation }: any) => {
       fetchMaterials();
     }, [])
   );
+
+  const openHistory = async (material: Material) => {
+    setHistoryMaterial(material);
+    setHistoryVisible(true);
+    setHistoryLoading(true);
+    setLedger([]);
+    try {
+      // OUT: material issued to sites
+      const { data: issues, error: issuesErr } = await supabase
+        .from('material_issues')
+        .select('quantity, date, sites(name)')
+        .eq('material_id', material.id);
+      if (issuesErr) throw issuesErr;
+
+      // IN: purchases of this material
+      const { data: purchases, error: purchasesErr } = await supabase
+        .from('purchases')
+        .select('quantity, date, vendor_name')
+        .eq('material_id', material.id);
+      if (purchasesErr) throw purchasesErr;
+
+      const outRows: LedgerRow[] = (issues || []).map((r: any) => ({
+        type: 'out',
+        quantity: Number(r.quantity),
+        date: r.date,
+        label: r.sites?.name ? `Issued to ${r.sites.name}` : 'Issued',
+      }));
+      const inRows: LedgerRow[] = (purchases || []).map((r: any) => ({
+        type: 'in',
+        quantity: Number(r.quantity),
+        date: r.date,
+        label: r.vendor_name ? `Purchased from ${r.vendor_name}` : 'Purchased',
+      }));
+
+      const combined = [...inRows, ...outRows].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      setLedger(combined);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to load history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
   const deleteMaterial = async (id: string) => {
     Alert.alert(
@@ -69,7 +128,7 @@ const StockScreen = ({ navigation }: any) => {
           <View style={styles.materialInfo}>
             <Ionicons name="cube" size={32} color={getStockStatusColor(item.current_stock)} />
             <View style={styles.materialDetails}>
-              <Text variant="titleMedium" style={styles.materialName}>{item.name}</Text>
+              <Text variant="titleMedium" style={styles.materialName}>{materialLabel(item)}</Text>
               <Text variant="bodySmall" style={styles.unit}>Unit: {item.unit}</Text>
             </View>
           </View>
@@ -86,11 +145,18 @@ const StockScreen = ({ navigation }: any) => {
       </Card.Content>
       <Card.Actions>
         <Button
+          mode="text"
+          onPress={() => openHistory(item)}
+          icon="history"
+        >
+          History
+        </Button>
+        <Button
           mode="outlined"
           onPress={() => navigation.navigate('Purchase', { materialId: item.id })}
           icon="plus-circle"
         >
-          Add Purchase
+          Purchase
         </Button>
         <Button
           mode="outlined"
@@ -138,6 +204,64 @@ const StockScreen = ({ navigation }: any) => {
         color="#fff"
         onPress={() => navigation.navigate('AddMaterial')}
       />
+
+      <Portal>
+        <Modal
+          visible={historyVisible}
+          onDismiss={() => setHistoryVisible(false)}
+          contentContainerStyle={styles.modal}
+        >
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text variant="titleMedium" style={styles.modalTitle}>
+                {materialLabel(historyMaterial)}
+              </Text>
+              <Text variant="bodySmall" style={styles.modalSubtitle}>
+                In / Out history · Current stock: {historyMaterial?.current_stock} {historyMaterial?.unit}
+              </Text>
+            </View>
+            <Ionicons name="close" size={24} color="#666" onPress={() => setHistoryVisible(false)} />
+          </View>
+
+          {historyLoading ? (
+            <ActivityIndicator style={{ marginVertical: 30 }} color="#27ae60" />
+          ) : ledger.length === 0 ? (
+            <Text style={styles.emptyHistory}>No purchase or issue records yet.</Text>
+          ) : (
+            <ScrollView style={{ maxHeight: 420 }}>
+              {ledger.map((row, i) => (
+                <View key={i} style={styles.ledgerRow}>
+                  <View
+                    style={[
+                      styles.ledgerBadge,
+                      { backgroundColor: row.type === 'in' ? '#e8f8f0' : '#fdecea' },
+                    ]}
+                  >
+                    <Ionicons
+                      name={row.type === 'in' ? 'arrow-down' : 'arrow-up'}
+                      size={16}
+                      color={row.type === 'in' ? '#27ae60' : '#e74c3c'}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.ledgerLabel}>{row.label}</Text>
+                    <Text style={styles.ledgerDate}>{formatDate(row.date)}</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.ledgerQty,
+                      { color: row.type === 'in' ? '#27ae60' : '#e74c3c' },
+                    ]}
+                  >
+                    {row.type === 'in' ? '+' : '−'}
+                    {row.quantity} {historyMaterial?.unit}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </Modal>
+      </Portal>
     </View>
   );
 };
@@ -220,6 +344,59 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: '#27ae60',
+  },
+  modal: {
+    backgroundColor: 'white',
+    margin: 20,
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontWeight: 'bold',
+    color: '#2c3e50',
+  },
+  modalSubtitle: {
+    color: '#7f8c8d',
+    marginTop: 2,
+  },
+  emptyHistory: {
+    textAlign: 'center',
+    color: '#999',
+    marginVertical: 30,
+  },
+  ledgerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  ledgerBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ledgerLabel: {
+    color: '#2c3e50',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  ledgerDate: {
+    color: '#95a5a6',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  ledgerQty: {
+    fontWeight: 'bold',
+    fontSize: 15,
   },
 });
 
