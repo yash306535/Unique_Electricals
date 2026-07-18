@@ -1,0 +1,42 @@
+name: Build Windows Desktop EXE
+
+# Produces the Windows installer (.exe) on a real Windows runner — no Wine needed.
+# Trigger manually from the Actions tab (Run workflow), or by pushing a v* tag.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install app dependencies
+        run: npm install
+
+      - name: Export Expo web build into desktop/web
+        run: npx expo export --platform web --output-dir desktop/web
+
+      - name: Install desktop (Electron) dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Build Windows installer
+        working-directory: desktop
+        run: npm run build-win
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Unique-Electricals-Windows-Installer
+          path: desktop/dist/*.exe
+          if-no-files-found: error

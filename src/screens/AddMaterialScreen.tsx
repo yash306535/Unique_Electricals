@@ -22,6 +22,7 @@ const AddMaterialScreen = ({ navigation }: any) => {
   const [errors, setErrors] = useState({ name: '', unit: '' });
   const [notification, setNotification] = useState({ visible: false, type: '', message: '' });
   const [menuVisible, setMenuVisible] = useState(false);
+  const [customUnit, setCustomUnit] = useState(false);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   const unitOptions = [
@@ -150,37 +151,80 @@ const AddMaterialScreen = ({ navigation }: any) => {
 
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Unit of Measurement *</Text>
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <TouchableOpacity 
-                  onPress={() => setMenuVisible(true)}
-                  style={[styles.inputWrapper, styles.pickerWrapper, errors.unit && styles.inputWrapperError]}
-                >
-                  <Ionicons name="analytics-outline" size={20} color="#5B9BD5" style={styles.inputIcon} />
-                  <Text style={[styles.pickerText, !formData.unit && styles.placeholderText]}>
-                    {formData.unit ? unitOptions.find(u => u.value === formData.unit)?.label : 'Select unit of measurement'}
-                  </Text>
-                  <Ionicons name="chevron-down" size={20} color="#64748B" />
-                </TouchableOpacity>
-              }
-              contentStyle={styles.menuContent}
-            >
-              {unitOptions.map((option) => (
-                <Menu.Item
-                  key={option.value}
+            {customUnit ? (
+              <>
+                <View style={[styles.inputWrapper, errors.unit && styles.inputWrapperError]}>
+                  <Ionicons name="create-outline" size={20} color="#5B9BD5" style={styles.inputIcon} />
+                  <RNTextInput
+                    placeholder="e.g. dozen, roll, quintal, box"
+                    placeholderTextColor="#94A3B8"
+                    value={formData.unit}
+                    onChangeText={(text) => {
+                      setFormData({ ...formData, unit: text });
+                      if (errors.unit) setErrors({ ...errors, unit: '' });
+                    }}
+                    style={styles.input}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoFocus
+                  />
+                </View>
+                <TouchableOpacity
                   onPress={() => {
-                    setFormData({ ...formData, unit: option.value });
+                    setCustomUnit(false);
+                    setFormData({ ...formData, unit: '' });
                     if (errors.unit) setErrors({ ...errors, unit: '' });
-                    setMenuVisible(false);
                   }}
-                  title={option.label}
-                  leadingIcon={option.icon}
+                  style={styles.linkRow}
+                >
+                  <Ionicons name="list-outline" size={16} color="#5B9BD5" />
+                  <Text style={styles.linkText}>Choose from list instead</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                  <TouchableOpacity
+                    onPress={() => setMenuVisible(true)}
+                    style={[styles.inputWrapper, styles.pickerWrapper, errors.unit && styles.inputWrapperError]}
+                  >
+                    <Ionicons name="analytics-outline" size={20} color="#5B9BD5" style={styles.inputIcon} />
+                    <Text style={[styles.pickerText, !formData.unit && styles.placeholderText]}>
+                      {formData.unit ? (unitOptions.find(u => u.value === formData.unit)?.label ?? formData.unit) : 'Select unit of measurement'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color="#64748B" />
+                  </TouchableOpacity>
+                }
+                contentStyle={styles.menuContent}
+              >
+                {unitOptions.map((option) => (
+                  <Menu.Item
+                    key={option.value}
+                    onPress={() => {
+                      setFormData({ ...formData, unit: option.value });
+                      if (errors.unit) setErrors({ ...errors, unit: '' });
+                      setMenuVisible(false);
+                    }}
+                    title={option.label}
+                    leadingIcon={option.icon}
+                    titleStyle={styles.menuItemTitle}
+                  />
+                ))}
+                <Menu.Item
+                  onPress={() => {
+                    setMenuVisible(false);
+                    setCustomUnit(true);
+                    setFormData({ ...formData, unit: '' });
+                    if (errors.unit) setErrors({ ...errors, unit: '' });
+                  }}
+                  title="Add custom unit…"
+                  leadingIcon="plus"
                   titleStyle={styles.menuItemTitle}
                 />
-              ))}
-            </Menu>
+              </Menu>
+            )}
             {errors.unit ? <Text style={styles.errorText}>{errors.unit}</Text> : null}
           </View>
 
@@ -345,6 +389,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 6,
     marginLeft: 4,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    marginLeft: 4,
+  },
+  linkText: {
+    color: '#5B9BD5',
+    fontSize: 13,
+    fontWeight: '600',
   },
   infoBox: {
     flexDirection: 'row',
