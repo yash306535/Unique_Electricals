@@ -33,6 +33,19 @@ const formatDate = (d: string | Date) =>
     year: 'numeric',
   });
 
+// Per-category colours, mirroring the palette used on the Expenses screen so
+// the printed challan matches the app.
+const CATEGORY_COLORS: Record<string, { bg: string; fg: string; dot: string }> = {
+  labour: { bg: '#FFEBEB', fg: '#B5342A', dot: '#FF6B6B' },
+  transport: { bg: '#E2F7F5', fg: '#0F6F66', dot: '#4ECDC4' },
+  equipment: { bg: '#FFF6D6', fg: '#8A6A08', dot: '#E9C41F' },
+  misc: { bg: '#E8F7F1', fg: '#166F55', dot: '#95E1D3' },
+};
+const DEFAULT_CATEGORY = { bg: '#EEF2F7', fg: '#33556E', dot: '#8FA9C0' };
+
+const categoryStyle = (category: string) =>
+  CATEGORY_COLORS[(category || '').toLowerCase()] || DEFAULT_CATEGORY;
+
 // Secondary detail line under the category (labour count / transport / notes).
 const detailsFor = (e: Expense): string => {
   const parts: string[] = [];
@@ -54,15 +67,20 @@ export const buildExpenseChallanHtml = (
   const rows = expenses
     .map((e, i) => {
       const detail = detailsFor(e);
+      const c = categoryStyle(e.category);
       return `
       <tr>
         <td class="c">${i + 1}</td>
         <td>
-          <div class="cat">${escapeHtml((e.category || 'expense').toUpperCase())}</div>
+          <span class="pill" style="background:${c.bg};color:${c.fg};">
+            <span class="dot" style="background:${c.dot};"></span>${escapeHtml(
+              (e.category || 'expense').toUpperCase()
+            )}
+          </span>
           ${detail ? `<div class="note">${detail}</div>` : ''}
         </td>
-        <td>${formatDate(e.date)}</td>
-        <td class="r">${inr(e.amount)}</td>
+        <td class="date">${formatDate(e.date)}</td>
+        <td class="r amt">${inr(e.amount)}</td>
       </tr>`;
     })
     .join('');
@@ -94,20 +112,31 @@ export const buildExpenseChallanHtml = (
     .meta .lbl { color:#5b6b7c; font-size:10px; text-transform:uppercase; letter-spacing:.6px; }
     .meta .val { font-weight:700; margin-top:2px; }
 
+    /* Colour accent stripe under the header band */
+    .accent { height:5px; background:linear-gradient(90deg,#FF6B6B 0%,#E9C41F 33%,#4ECDC4 66%,#0f2a44 100%); }
+
     table { width:100%; border-collapse:collapse; }
     thead th { background:#f0f3f7; color:#0f2a44; font-size:10.5px; letter-spacing:.7px;
                text-transform:uppercase; padding:9px 10px; border-bottom:1.5px solid #c8d4e0; text-align:left; }
-    tbody td { padding:9px 10px; font-size:12.5px; border-bottom:1px solid #eaeef2; vertical-align:top; }
-    tbody tr:nth-child(even) td { background:#fbfcfd; }
-    .c { text-align:center; width:42px; }
+    tbody td { padding:10px; font-size:12.5px; border-bottom:1px solid #eaeef2; vertical-align:top; }
+    tbody tr:nth-child(even) td { background:#fafbfd; }
+    .c { text-align:center; width:42px; color:#7a8a9a; font-weight:700; }
     .r { text-align:right; white-space:nowrap; }
     .w-date { width:110px; }
     .w-amt  { width:120px; }
-    .cat { font-weight:700; }
-    .note { color:#5b6b7c; font-size:11px; margin-top:2px; }
+    .date { color:#5b6b7c; font-size:11.5px; }
+    .amt  { font-weight:700; color:#0f2a44; font-size:13px; }
 
-    .total td { background:#e8eef5 !important; font-weight:800; font-size:14px;
-                color:#0f2a44; border-top:1.5px solid #c8d4e0; border-bottom:none; padding:12px 10px; }
+    /* Coloured category pill (matches the app's category colours) */
+    .pill { display:inline-block; padding:3px 10px 3px 8px; border-radius:11px;
+            font-size:10.5px; font-weight:800; letter-spacing:.5px; white-space:nowrap; }
+    .dot  { display:inline-block; width:6px; height:6px; border-radius:50%;
+            margin-right:6px; vertical-align:middle; }
+    .note { color:#5b6b7c; font-size:11px; margin-top:4px; }
+
+    .total td { background:#0f2a44 !important; color:#fff !important; font-weight:800;
+                font-size:14.5px; border-bottom:none; padding:13px 10px; letter-spacing:.4px; }
+    .total .r { color:#8ee6c8 !important; font-size:16px; }
 
     /* Generous breathing room so there is real space to sign. */
     .foot { display:flex; justify-content:space-between; gap:40px; padding:0 18px 18px; }
@@ -132,6 +161,8 @@ export const buildExpenseChallanHtml = (
           ${COMPANY.email}
         </div>
       </div>
+
+      <div class="accent"></div>
 
       <div class="title">EXPENSE CHALLAN</div>
 
