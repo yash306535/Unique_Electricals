@@ -10,7 +10,7 @@ const COMPANY = {
   tagline2: 'H.T., L.T., T.F. And Street light WORK SPECIALIST',
   address:
     'Alankapuram Society, Phase-3, Flat No. 111, C Wing, Wadmukhwadi, Pune-412105',
-  email: 'pravinrokade4466@gmail.com',
+  email: 'uniqueelectricals4466@gmail.com',
   pan: 'CDTPR6762G',
   gstn: '27CDTPR6762G1ZQ',
   mobile: '8928794644 / 9545304644',
@@ -164,7 +164,7 @@ export const buildExpenseChallanHtml = (
 
       <div class="accent"></div>
 
-      <div class="title">EXPENSE CHALLAN</div>
+      <div class="title">EXPENSES CHALLAN</div>
 
       <div class="meta">
         <div><div class="lbl">Site</div><div class="val">${escapeHtml(siteName)}</div></div>
