@@ -33,13 +33,13 @@ const formatDate = (d: string | Date) =>
     year: 'numeric',
   });
 
-// Compose the "Particulars" text for one expense row.
-const particularsFor = (e: Expense): string => {
-  const parts: string[] = [e.category ? e.category.toUpperCase() : 'EXPENSE'];
+// Secondary detail line under the category (labour count / transport / notes).
+const detailsFor = (e: Expense): string => {
+  const parts: string[] = [];
   if (e.labour_count) parts.push(`${e.labour_count} labour`);
   if (e.transport_name) parts.push(escapeHtml(e.transport_name));
   if (e.description) parts.push(escapeHtml(e.description));
-  return parts.join(' — ');
+  return parts.join(' • ');
 };
 
 export const buildExpenseChallanHtml = (
@@ -52,36 +52,70 @@ export const buildExpenseChallanHtml = (
   );
 
   const rows = expenses
-    .map(
-      (e, i) => `
+    .map((e, i) => {
+      const detail = detailsFor(e);
+      return `
       <tr>
         <td class="c">${i + 1}</td>
-        <td>${particularsFor(e)}</td>
-        <td class="r">${formatDate(e.date)}</td>
+        <td>
+          <div class="cat">${escapeHtml((e.category || 'expense').toUpperCase())}</div>
+          ${detail ? `<div class="note">${detail}</div>` : ''}
+        </td>
+        <td>${formatDate(e.date)}</td>
         <td class="r">${inr(e.amount)}</td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join('');
 
   return `<!doctype html><html><head><meta charset="utf-8"/>
   <style>
+    @page { size: A4; margin: 12mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #111; padding: 24px; }
-    .frame { border: 2px solid #111; }
-    .head { display:flex; justify-content:space-between; padding:10px 14px; border-bottom:2px solid #111; }
-    .brand { font-size: 24px; font-weight: 800; }
-    .sub { font-size: 11px; font-weight: 700; }
-    .addr { font-size: 11px; margin-top: 3px; }
-    .mob { font-size: 11px; text-align: right; white-space: nowrap; }
-    .title { text-align:center; font-weight:800; letter-spacing:1px; padding:4px; border-bottom:2px solid #111; background:#f2f2f2; }
-    .meta { display:flex; justify-content:space-between; padding:8px 14px; border-bottom:2px solid #111; font-size:13px; }
-    table { width:100%; border-collapse: collapse; }
-    th, td { border:1px solid #111; padding:8px 10px; font-size:13px; }
-    th { background:#f2f2f2; }
-    td.c, th.c { text-align:center; width:44px; }
-    td.r { text-align:right; }
-    .total td { font-weight:800; font-size:14px; background:#f7f7f7; }
-    .foot { display:flex; justify-content:space-between; padding:26px 14px 10px; font-size:12px; }
+    body {
+      font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+      color: #1a1a1a; margin: 0; padding: 0;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .frame { border: 2px solid #0f2a44; border-radius: 2px; overflow: hidden; }
+
+    .head { display:flex; justify-content:space-between; align-items:flex-start;
+            padding:16px 18px; background:#0f2a44; color:#fff; gap:16px; }
+    .brand { font-size: 25px; font-weight: 800; letter-spacing:.3px; line-height:1.15; }
+    .sub  { font-size: 10.5px; font-weight: 700; opacity:.92; margin-top:3px; letter-spacing:.2px; }
+    .addr { font-size: 10.5px; margin-top:2px; opacity:.85; }
+    .contact { font-size: 10.5px; text-align:right; white-space:nowrap; line-height:1.7; opacity:.95; }
+    .contact b { display:block; font-size:12px; opacity:1; }
+
+    .title { text-align:center; font-weight:800; letter-spacing:3px; font-size:14px;
+             padding:8px; background:#e8eef5; color:#0f2a44; border-bottom:1px solid #c8d4e0; }
+
+    .meta { display:flex; justify-content:space-between; gap:12px;
+            padding:11px 18px; font-size:12.5px; background:#fafbfc; border-bottom:1px solid #d8e0e8; }
+    .meta .lbl { color:#5b6b7c; font-size:10px; text-transform:uppercase; letter-spacing:.6px; }
+    .meta .val { font-weight:700; margin-top:2px; }
+
+    table { width:100%; border-collapse:collapse; }
+    thead th { background:#f0f3f7; color:#0f2a44; font-size:10.5px; letter-spacing:.7px;
+               text-transform:uppercase; padding:9px 10px; border-bottom:1.5px solid #c8d4e0; text-align:left; }
+    tbody td { padding:9px 10px; font-size:12.5px; border-bottom:1px solid #eaeef2; vertical-align:top; }
+    tbody tr:nth-child(even) td { background:#fbfcfd; }
+    .c { text-align:center; width:42px; }
+    .r { text-align:right; white-space:nowrap; }
+    .w-date { width:110px; }
+    .w-amt  { width:120px; }
+    .cat { font-weight:700; }
+    .note { color:#5b6b7c; font-size:11px; margin-top:2px; }
+
+    .total td { background:#e8eef5 !important; font-weight:800; font-size:14px;
+                color:#0f2a44; border-top:1.5px solid #c8d4e0; border-bottom:none; padding:12px 10px; }
+
+    /* Generous breathing room so there is real space to sign. */
+    .foot { display:flex; justify-content:space-between; gap:40px; padding:0 18px 18px; }
+    .sig  { width:250px; padding-top:86px; }
+    .sig.right { text-align:right; }
+    .sigline { border-top:1.5px dotted #7a8a9a; margin-bottom:7px; }
+    .siglabel { font-size:11.5px; font-weight:700; color:#0f2a44; }
+    .sigsub { font-size:10px; color:#7a8a9a; margin-top:2px; }
   </style></head><body>
     <div class="frame">
       <div class="head">
@@ -89,29 +123,51 @@ export const buildExpenseChallanHtml = (
           <div class="brand">${COMPANY.name}</div>
           <div class="sub">${COMPANY.tagline1}</div>
           <div class="sub">${COMPANY.tagline2}</div>
-          <div class="addr">Add.: ${COMPANY.address}</div>
-          <div class="addr">Email: ${COMPANY.email}</div>
-          <div class="addr">PAN: ${COMPANY.pan} &nbsp; GSTN: ${COMPANY.gstn}</div>
+          <div class="addr">${COMPANY.address}</div>
+          <div class="addr">PAN: ${COMPANY.pan} &nbsp;•&nbsp; GSTN: ${COMPANY.gstn}</div>
         </div>
-        <div class="mob">Mob.: ${COMPANY.mobile}</div>
+        <div class="contact">
+          <b>${COMPANY.mobile.split(' / ')[0]}</b>
+          ${COMPANY.mobile.split(' / ')[1] || ''}<br/>
+          ${COMPANY.email}
+        </div>
       </div>
+
       <div class="title">EXPENSE CHALLAN</div>
+
       <div class="meta">
-        <div><b>Site:</b> ${escapeHtml(siteName)}</div>
-        <div><b>Date:</b> ${formatDate(new Date())}</div>
+        <div><div class="lbl">Site</div><div class="val">${escapeHtml(siteName)}</div></div>
+        <div><div class="lbl">Items</div><div class="val">${expenses.length}</div></div>
+        <div><div class="lbl">Date</div><div class="val">${formatDate(new Date())}</div></div>
       </div>
+
       <table>
         <thead>
-          <tr><th class="c">SR</th><th>PARTICULARS</th><th class="r">DATE</th><th class="r">AMOUNT</th></tr>
+          <tr>
+            <th class="c">SR</th>
+            <th>Particulars</th>
+            <th class="w-date">Date</th>
+            <th class="r w-amt">Amount</th>
+          </tr>
         </thead>
         <tbody>
-          ${rows || '<tr><td colspan="4" class="c">No expenses</td></tr>'}
-          <tr class="total"><td></td><td>TOTAL</td><td></td><td class="r">${inr(total)}</td></tr>
+          ${rows || '<tr><td colspan="4" class="c">No expenses selected</td></tr>'}
+          <tr class="total">
+            <td></td><td>TOTAL</td><td></td><td class="r">${inr(total)}</td>
+          </tr>
         </tbody>
       </table>
+
       <div class="foot">
-        <div>Receiver's Signature &amp; Rubber Stamp</div>
-        <div>For ${COMPANY.name}</div>
+        <div class="sig">
+          <div class="sigline"></div>
+          <div class="siglabel">Receiver's Signature &amp; Rubber Stamp</div>
+        </div>
+        <div class="sig right">
+          <div class="sigline"></div>
+          <div class="siglabel">For ${COMPANY.name}</div>
+          <div class="sigsub">Authorised Signatory</div>
+        </div>
       </div>
     </div>
   </body></html>`;

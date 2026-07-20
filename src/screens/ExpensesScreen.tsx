@@ -13,7 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { Button, Card, FAB, Menu, Modal, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
+import { Button, Card, Checkbox, FAB, Menu, Modal, Portal, Snackbar, Text, TextInput } from 'react-native-paper';
 import { supabase } from '../config/supabase';
 import { Expense } from '../types';
 import { buildExpenseChallanHtml, downloadChallan } from '../utils/challan';
@@ -31,6 +31,7 @@ const ExpensesScreen = ({ route }: any) => {
   const [transportOptions, setTransportOptions] = useState<string[]>([]);
   const [transportMenuVisible, setTransportMenuVisible] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   // Snackbar states
   const [snackbar, setSnackbar] = useState({
@@ -221,14 +222,30 @@ const ExpensesScreen = ({ route }: any) => {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const allSelected = expenses.length > 0 && selectedIds.length === expenses.length;
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? [] : expenses.map((e) => e.id));
+  };
+
+  // No explicit selection = include everything.
+  const challanExpenses =
+    selectedIds.length > 0 ? expenses.filter((e) => selectedIds.includes(e.id)) : expenses;
+
   const handleDownloadChallan = async () => {
-    if (expenses.length === 0) {
+    if (challanExpenses.length === 0) {
       showSnackbar('No expenses to include in the challan', 'info');
       return;
     }
     try {
       setGeneratingPdf(true);
-      const html = buildExpenseChallanHtml(siteName, expenses);
+      const html = buildExpenseChallanHtml(siteName, challanExpenses);
       await downloadChallan(html);
     } catch (error: any) {
       showSnackbar(error.message || 'Failed to generate challan', 'error');
@@ -292,6 +309,11 @@ const ExpensesScreen = ({ route }: any) => {
         <Card.Content>
           <View style={styles.expenseHeader}>
             <View style={styles.categoryContainer}>
+              <Checkbox
+                status={selectedIds.includes(item.id) ? 'checked' : 'unchecked'}
+                onPress={() => toggleSelect(item.id)}
+                color="#2089dc"
+              />
               <View
                 style={[
                   styles.categoryIcon,
@@ -395,19 +417,35 @@ const ExpensesScreen = ({ route }: any) => {
             <Ionicons name="business-outline" size={14} color="white" />
             <Text variant="bodySmall" style={styles.siteNameText}> {siteName}</Text>
           </View>
-          <Button
-            mode="contained"
-            icon="file-pdf-box"
-            onPress={handleDownloadChallan}
-            loading={generatingPdf}
-            disabled={generatingPdf}
-            style={styles.challanButton}
-            buttonColor="rgba(255,255,255,0.22)"
-            textColor="white"
-            compact
-          >
-            Download Challan (PDF)
-          </Button>
+          <View style={styles.challanRow}>
+            <Button
+              mode="contained"
+              icon="file-pdf-box"
+              onPress={handleDownloadChallan}
+              loading={generatingPdf}
+              disabled={generatingPdf || expenses.length === 0}
+              style={styles.challanButton}
+              buttonColor="rgba(255,255,255,0.22)"
+              textColor="white"
+              compact
+            >
+              {selectedIds.length > 0
+                ? `Challan PDF (${selectedIds.length} selected)`
+                : 'Challan PDF (All)'}
+            </Button>
+            {expenses.length > 0 && (
+              <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllBtn}>
+                <Ionicons
+                  name={allSelected ? 'checkbox' : 'square-outline'}
+                  size={16}
+                  color="white"
+                />
+                <Text style={styles.selectAllText}>
+                  {allSelected ? 'Clear' : 'Select all'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </Card.Content>
       </Card>
 
@@ -705,10 +743,27 @@ const styles = StyleSheet.create({
     color: 'white',
     opacity: 0.9,
   },
-  challanButton: {
+  challanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 12,
     marginTop: 14,
+  },
+  challanButton: {
     borderRadius: 10,
-    alignSelf: 'flex-start',
+  },
+  selectAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  selectAllText: {
+    color: 'white',
+    fontSize: 12.5,
+    fontWeight: '600',
   },
   metaRow: {
     flexDirection: 'row',
