@@ -21,8 +21,13 @@
     "icon": "build/icon.png",
     "files": [
       "main.js",
-      "build/icon.png",
-      "web/**/*"
+      "build/icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "web",
+        "to": "web"
+      }
     ],
     "win": {
       "target": [

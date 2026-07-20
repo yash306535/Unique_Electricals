@@ -3,7 +3,14 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const WEB_DIR = path.join(__dirname, 'web');
+// The exported web build ships as an extraResource (a verbatim copy outside
+// the asar). It cannot live inside the asar: Expo emits icon fonts under
+// web/assets/node_modules/@expo/vector-icons/..., and electron-builder strips
+// any `node_modules` path from the app bundle — which silently removed every
+// icon font from the packaged app.
+const WEB_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, 'web')
+  : path.join(__dirname, 'web');
 
 const MIME = {
   '.html': 'text/html',
