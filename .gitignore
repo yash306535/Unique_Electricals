@@ -41,3 +41,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+# unrelated local sample data
+sample_file/

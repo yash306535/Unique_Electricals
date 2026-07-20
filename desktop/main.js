@@ -44,7 +44,14 @@ function startServer() {
 
       fs.readFile(filePath, (err, data) => {
         if (err) {
-          // SPA fallback: unknown routes serve index.html for client-side routing.
+          // Only fall back to index.html for navigation requests (no file
+          // extension). A missing *asset* must 404 — otherwise fonts/scripts
+          // silently receive HTML, which shows up as missing icons.
+          if (path.extname(filePath)) {
+            res.writeHead(404);
+            res.end('Not found');
+            return;
+          }
           fs.readFile(path.join(WEB_DIR, 'index.html'), (e2, d2) => {
             if (e2) {
               res.writeHead(404);
@@ -74,12 +81,15 @@ let mainWindow;
 async function createWindow() {
   const port = await startServer();
 
+  const origin = `http://127.0.0.1:${port}`;
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
     minWidth: 900,
     minHeight: 600,
     title: 'Unique Electricals',
+    icon: path.join(__dirname, 'build', 'icon.png'),
     backgroundColor: '#ffffff',
     webPreferences: {
       contextIsolation: true,
@@ -88,11 +98,15 @@ async function createWindow() {
   });
 
   mainWindow.setMenuBarVisibility(false);
-  mainWindow.loadURL(`http://127.0.0.1:${port}`);
+  mainWindow.loadURL(origin);
 
-  // Open external links (http/https to other origins) in the system browser.
+  // Open only *external* origins in the system browser. Same-origin and
+  // about:blank/blob/data must stay in-app — the challan PDF prints through
+  // an in-page frame and would break if we denied it here.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http')) {
+    const isExternal =
+      /^https?:\/\//i.test(url) && !url.startsWith(origin);
+    if (isExternal) {
       shell.openExternal(url);
       return { action: 'deny' };
     }

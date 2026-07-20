@@ -117,13 +117,72 @@ export const buildExpenseChallanHtml = (
   </body></html>`;
 };
 
-// Generate the PDF and hand it to the user (share sheet on native,
-// browser print/save-as-PDF dialog on web).
+// expo-print's web implementation is a stub — both print() and
+// printToFileAsync() just call window.print(), which prints the CURRENT page
+// and ignores the supplied html. So on web (and inside the Electron desktop
+// app) we render the challan into a hidden iframe and print that instead,
+// letting the user "Save as PDF".
+const printHtmlOnWeb = (html: string): Promise<void> =>
+  new Promise((resolve) => {
+    const doc: any = (globalThis as any).document;
+    if (!doc) {
+      resolve();
+      return;
+    }
+
+    const iframe: any = doc.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    doc.body.appendChild(iframe);
+
+    let settled = false;
+    const cleanup = () => {
+      if (settled) return;
+      settled = true;
+      // Keep the frame alive briefly so the print dialog can read it.
+      setTimeout(() => {
+        try {
+          iframe.remove();
+        } catch {
+          /* already detached */
+        }
+      }, 1000);
+      resolve();
+    };
+
+    const doPrint = () => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch {
+        /* printing blocked — nothing more we can do */
+      }
+      cleanup();
+    };
+
+    try {
+      const frameDoc = iframe.contentWindow.document;
+      frameDoc.open();
+      frameDoc.write(html);
+      frameDoc.close();
+      // Give the document a tick to lay out before printing.
+      iframe.onload = doPrint;
+      setTimeout(doPrint, 400);
+    } catch {
+      cleanup();
+    }
+  });
+
+// Generate the challan and hand it to the user (share sheet on native,
+// print / save-as-PDF dialog on web + desktop).
 export const downloadChallan = async (html: string): Promise<void> => {
   if (Platform.OS === 'web') {
-    // printToFileAsync is unsupported on web; printAsync opens the browser
-    // print dialog where the user can "Save as PDF".
-    await Print.printAsync({ html });
+    await printHtmlOnWeb(html);
     return;
   }
   const { uri } = await Print.printToFileAsync({ html });
